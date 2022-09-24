@@ -13,6 +13,7 @@ rbutton_1 = QRadioButton('1')
 rbutton_2 = QRadioButton('2')
 rbutton_3 = QRadioButton('3')
 rbutton_4 = QRadioButton('4')
+#что-то такое#
 
 
 RadioGroup = QButtonGroup()
