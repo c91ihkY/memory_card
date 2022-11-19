@@ -52,10 +52,6 @@ class Enemy(GameSprite):
         else:
             self.rect.x += self.speed
 
-
-
-
-
 hero = Player('hero.png', 5, win_height - 80, 4)
 cyborg = Enemy('cyborg.png', win_width - 80, 280, 2)
 final = GameSprite ('chestt.png', win_width - 120, win_height - 80, 0)
