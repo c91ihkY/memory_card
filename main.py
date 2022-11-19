@@ -1,129 +1,123 @@
-import os
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import * 
-from PyQt5.QtGui import QPixmap 
-from PIL import Image
+from pygame import *
 
+win_width = 700
+win_height = 500
 
-app = QApplication([])
-win = QWidget()
-win.resize(700,600)
-win.setWindowTitle('Easy Editor bro')
-lb_image = QLabel('Картинка')
-btn_dir = QPushButton('Папка')
-lw_files = QListWidget()
+window = display.set_mode((win_width, win_height))
+display.set_caption('Maze')
+background = transform.scale(image.load('background.jpg'), (win_width,win_height))
 
-btn1 = QPushButton('Лево')
-btn2 = QPushButton('Право')
-btn3 = QPushButton('Зеркало')
-btn4 = QPushButton('Резкость')
-btn5 = QPushButton('Ч/Б')
+game = True
+clock = time.Clock()
+FPS = 60
 
-row = QHBoxLayout()
-col1 = QVBoxLayout()
-col2 = QVBoxLayout()
-col1.addWidget(btn_dir)
-col1.addWidget(lw_files)
-col2.addWidget(lb_image, 95)
-row_tools = QHBoxLayout()
-row_tools.addWidget(btn1)
-row_tools.addWidget(btn2)
-row_tools.addWidget(btn3)
-row_tools.addWidget(btn4)
-row_tools.addWidget(btn5)
-col2.addLayout(row_tools)
+mixer.init()
+mixer.music.load('jungles.ogg')
+mixer.music.play()
 
-row.addLayout(col1, 25)
-row.addLayout(col2, 80)
-win.setLayout(row)
+class GameSprite(sprite.Sprite):
+    def __init__(self, player_image, player_x, player_y, player_speed):
+        super().__init__()
+        self.image = transform.scale(image.load(player_image), (65, 65))
+        self.speed = player_speed 
+        self.rect = self.image.get_rect()
+        self.rect.x = player_x
+        self.rect.y = player_y
+    def reset(self):
+        window.blit(self.image, (self.rect.x, self.rect.y))
 
-win.show()
+class Player(GameSprite):
+    def update(self):
+        keys_pressed = key.get_pressed()
 
-workdir = ''
+        if keys_pressed[K_a] and self.rect.x > 5:
+            self.rect.x -= self.speed
+        if keys_pressed[K_d]  and self.rect.x < win_width - 80:
+            self.rect.x += self.speed
+        if keys_pressed[K_w] and self.rect.y > 5:
+            self.rect.y -= self.speed
+        if keys_pressed[K_s] and self.rect.y < win_height - 80:
+            self.rect.y += self.speed
 
-def filter(files, extensions):
-    result = []
-    for filename in files:
-        for ext in extensions:
-            if filename.endswith(ext):
-                result.append(filename)
-    return result
+class Enemy(GameSprite):
+    direction = "left"
+    def update(self):
+        if self.rect.x <= 450:
+            self.direction = 'right'
+        if self.rect.x >= win_width - 85:
+            self.direction = 'left'
 
-def chooseWorkdir():
-    global workdir
-    workdir = QFileDialog.getExistingDirectory()
+        if self.direction == 'left': 
+            self.rect.x -= self.speed
+        else:
+            self.rect.x += self.speed
 
-def showFilenamesList():
-    extensions = ['.jpg','.jpeg','.png','.gif','.bmp']
-    chooseWorkdir()
-    filenames = filter(os.listdir(workdir), extensions)
-    lw_files.clear()
-    for filename in filenames:
-        lw_files.addItem(filename)
-
-
-btn_dir.clicked.connect(showFilenamesList)
-
-class ImageProcessor():
-    def __init__(self):
-        self.image = None
-        self.dir = None
-        self.filename = None
-        self.save_dir = "Modified/"
-
-    def loadImage(self, dir, filename):
-        self.dir = dir
-        self.filename = filename
-        image_path = os.path.join(dir, filename)
-        self.image = Image.open(image_path)
-
-    def do_bw(self):
-        self.image = self.image.convert("L")
-        self.saveImage()
-        image_path = os.path.join(self.dir, self.save_dir, self.filename)
-        self.showImage(image_path)
-
-
-    def saveImage(self):
-        path = os.path.join(self.dir, self.save_dir)
-        if not (os.path.exists(path) or os.path.isdir(path)):
-            os.mkdir(path)
-        image_path = os.path.join(path, self.filename)
-        self.image.save(image_path)
-
-    def showImage(self, path):
-        lb_image.hide()
-        pixmapimage = QPixmap(path)
-        w, h = lb_image.width(), lb_image.height()
-        pixmapimage = pixmapimage.scaled(w, h, Qt.KeepAspectRatio)
-        lb_image.setPixmap(pixmapimage)
-        lb_image.show()
-
-workimage = ImageProcessor()
-
-def showChosenImage():
-    if lw_files.currentRow() >= 0:
-        filename = lw_files.currentItem().text()
-        workimage.loadImage(workdir, filename)
-        image_path = os.path.join(workimage.dir, workimage.filename)
-        workimage.showImage(image_path)
+class Wall(sprite.Sprite):
+    def __init__(self, color_1, color_2, color_3, wall_x, wall_y, wall_width, wall_height):
+        super().__init__()
+        self.color_1 = color_1
+        self.color_2 = color_2
+        self.color_3 = color_3
+        self.width = wall_width
+        self.height = wall_height
+        
+        self.image = Surface((self.width, self.height))
+        self.image.fill((color_1, color_2, color_3))
+        
+        self.rect = self.image.get_rect()
+        self.rect.x = wall_x
+        self.rect.y = wall_y
     
-lw_files.currentRowChanged.connect(showChosenImage)
-btn5.clicked.connect(workimage.do_bw)
+    def draw_wall(self):
+        window.blit(self.image, (self.rect.x, self.rect.y))
 
+money = mixer.Sound('money.ogg')
+kick = mixer.Sound('kick.ogg')
 
-app.exec()
+hero = Player('hero.png', 5, win_height - 80, 4)
+cyborg = Enemy('cyborg.png', win_width - 80, 280, 2)
+final = GameSprite ('chestt.png', win_width - 120, win_height - 80, 0)
+w1 = Wall(154, 205, 50, 100, 20 , 450, 10)
+w2 = Wall(154, 205, 50, 100, 480, 350, 10)
+w3 = Wall(154, 205, 50, 100, 20 , 10, 380)
+finish = False
 
+font.init()
+label_font = font.Font(None, 70)
+win = label_font.render('YOU WIN!', True, (255, 255, 0))
 
+lose = label_font.render('YOU LOSE!', True, (255, 0, 0))
 
-
-
-
-       
-
-
+while game:
+    for e in event.get():
+        if e.type == QUIT:
+            game = False
     
+    if finish != True:
+        window.blit(background,(0, 0))
+        hero.update()
+        cyborg.update()
+
+        hero.reset()
+        cyborg.reset()
+        final.reset()
+
+        w1.draw_wall()
+        w2.draw_wall()
+        w3.draw_wall()
+
+        if sprite.collide_rect(hero, cyborg) or sprite.collide_rect(hero, w1) or sprite.collide_rect(hero, w2) or sprite.collide_rect(hero, w3):
+            finish = True
+            window.blit(lose,(200, 200))
+            kick.play()
+
+        if sprite.collide_rect(hero, final):
+            finish = True
+            window.blit(win, (200, 200))
+            money.play()
 
 
+    display.update()
+    clock.tick(FPS)
 
 
