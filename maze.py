@@ -32,28 +32,48 @@ class Player(GameSprite):
 
         if keys_pressed[K_a] and self.rect.x > 5:
             self.rect.x -= self.speed
-        if keys_pressed[K_d]  and self.rect.x < win_width - 10:
+        if keys_pressed[K_d]  and self.rect.x < win_width - 80:
             self.rect.x += self.speed
         if keys_pressed[K_w] and self.rect.y > 5:
             self.rect.y -= self.speed
-        if keys_pressed[K_s] and self.rect.y < win_height - 10:
+        if keys_pressed[K_s] and self.rect.y < win_height - 80:
             self.rect.y += self.speed
+
+class Enemy(GameSprite):
+    direction = "left"
+    def update(self):
+        if self.rect.x <= 450:
+            self.direction = 'right'
+        if self.rect.x >= win_width - 85:
+            self.direction = 'left'
+
+        if self.direction == 'left': 
+            self.rect.x -= self.speed
+        else:
+            self.rect.x += self.speed
+
+
+
 
 
 hero = Player('hero.png', 5, win_height - 80, 4)
-cyborg = GameSprite('cyborg.png', win_width - 80, 280, 2)
-final = GameSprite ('treasure.png', win_width - 120, win_height - 80, 0)
+cyborg = Enemy('cyborg.png', win_width - 80, 280, 2)
+final = GameSprite ('chestt.png', win_width - 120, win_height - 80, 0)
+finish = False
 
 while game:
     for e in event.get():
         if e.type == QUIT:
             game = False
-    window.blit(background,(0, 0))
+    
+    if finish != True:
+        window.blit(background,(0, 0))
+        hero.update()
+        cyborg.update()
 
-    hero.update()
-    hero.reset()
-    cyborg.reset()
-    final.reset()
+        hero.reset()
+        cyborg.reset()
+        final.reset()
 
     display.update()
     clock.tick(FPS)
